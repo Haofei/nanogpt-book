@@ -1,0 +1,18 @@
+# Summary
+
+- [从零读懂 nanoGPT](README.md)
+- [00 前言](chapters/00-preface.md)
+- [01 nanoGPT 是什么](chapters/01-what-is-nanogpt.md)
+- [02 Transformer 必备知识](chapters/02-transformer-basics.md)
+- [03 GPT 架构总览](chapters/03-gpt-architecture.md)
+- [04 读懂 model.py](chapters/04-read-model-py.md)
+- [05 读懂 train.py](chapters/05-read-train-py.md)
+- [06 数据与 Tokenization](chapters/06-data-and-tokenization.md)
+- [07 从零训练与微调](chapters/07-training-from-scratch.md)
+- [08 采样与文本生成](chapters/08-sampling-and-generation.md)
+- [09 性能、显存与分布式训练](chapters/09-performance.md)
+- [10 实验设计](chapters/10-experiments.md)
+- [11 如何扩展 nanoGPT](chapters/11-extend-nanogpt.md)
+- [附录 A PyTorch 速查](appendix/a-pytorch.md)
+- [附录 B 数学符号速查](appendix/b-math.md)
+

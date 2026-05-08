@@ -3,6 +3,12 @@
 
 ![nanoGPT](assets/nanogpt.jpg)
 
+## 中文书稿初版
+
+本仓库新增了一本面向 nanoGPT 源码学习的中文书稿初版：[从零读懂 nanoGPT](book/README.md)。
+
+书稿覆盖项目地图、Transformer 基础、`model.py`、`train.py`、数据准备、训练、采样、性能优化、实验设计和扩展方向。章节目录见 [book/SUMMARY.md](book/SUMMARY.md)。
+
 
 ---
 

@@ -1,0 +1,11 @@
+[book]
+title = "从零读懂 nanoGPT"
+authors = ["Haofei"]
+language = "zh-CN"
+multilingual = false
+src = "."
+
+[output.html]
+git-repository-url = "https://github.com/Haofei/nanogpt-book"
+edit-url-template = "https://github.com/Haofei/nanogpt-book/edit/main/book/{path}"
+
