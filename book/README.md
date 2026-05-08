@@ -28,6 +28,8 @@
 cd code/nanogpt
 ```
 
+如果阅读过程中遇到 `step`、`batch`、`logits`、`checkpoint`、`CUDA`、`MPS`、`DDP` 等术语，可以先查 [附录 C 术语与背景知识](appendix/c-glossary.md)。
+
 ## 项目源码地图
 
 | 文件或目录 | 本书章节 | 作用 |
@@ -55,6 +57,7 @@ cd code/nanogpt
 - [11 如何扩展 nanoGPT](chapters/11-extend-nanogpt.md)
 - [附录 A PyTorch 速查](appendix/a-pytorch.md)
 - [附录 B 数学符号速查](appendix/b-math.md)
+- [附录 C 术语与背景知识](appendix/c-glossary.md)
 
 ## 写作原则
 

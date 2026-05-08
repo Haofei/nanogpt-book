@@ -15,4 +15,4 @@
 - [11 如何扩展 nanoGPT](chapters/11-extend-nanogpt.md)
 - [附录 A PyTorch 速查](appendix/a-pytorch.md)
 - [附录 B 数学符号速查](appendix/b-math.md)
-
+- [附录 C 术语与背景知识](appendix/c-glossary.md)

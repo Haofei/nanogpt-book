@@ -29,6 +29,8 @@ prompt text
 -> generated text
 ```
 
+训练和生成还有一个关键差异：训练时模型看到的历史 token 都来自真实数据，生成时后续历史 token 来自模型自己采样的结果。如果模型前面生成错了，后面会继续基于错误上下文生成。这也是为什么小模型经常越写越跑偏。
+
 ## 8.2 sample.py 的配置
 
 `sample.py` 顶部定义：
@@ -123,7 +125,15 @@ idx = torch.cat((idx, idx_next), dim=1)
 
 第二，采样只使用最后位置的 logits。因为我们只需要预测下一个 token。
 
-## 8.7 Temperature
+## 8.7 解码策略的背景
+
+如果每一步都取最大概率 token，这叫贪心解码。它稳定，但容易重复，也可能错过更自然的表达。
+
+如果从概率分布中采样，输出更多样，但也更不可控。temperature 和 top-k 的作用就是在稳定性和多样性之间调节。
+
+实际使用中，生成质量不只取决于模型本身，也取决于解码策略。同一个 checkpoint，在不同 temperature、top-k、prompt 下可能表现差异很大。
+
+## 8.8 Temperature
 
 temperature 作用在 logits 上：
 
@@ -141,7 +151,7 @@ logits = logits[:, -1, :] / temperature
 0.6, 0.8, 1.0, 1.2
 ```
 
-## 8.8 Top-k
+## 8.9 Top-k
 
 top-k 会保留最高的 k 个候选：
 
@@ -154,7 +164,7 @@ logits[logits < v[:, [-1]]] = -float('Inf')
 
 top-k 的直觉是：不让模型从极低概率 token 中采样。它能提升输出稳定性，但太小会降低多样性。
 
-## 8.9 贪心、采样和可重复性
+## 8.10 贪心、采样和可重复性
 
 nanoGPT 使用：
 
@@ -172,7 +182,7 @@ torch.multinomial(probs, num_samples=1)
 
 但不同硬件和不同 PyTorch 后端仍可能存在细微差异。
 
-## 8.10 采样实验
+## 8.11 采样实验
 
 固定模型和 prompt，比较参数：
 
@@ -189,7 +199,7 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --t
 - 是否出现更多新词或奇怪字符。
 - 是否保持 Shakespeare 风格。
 
-## 8.11 常见问题
+## 8.12 常见问题
 
 为什么 prompt 很长时前面的内容好像被忘了？
 

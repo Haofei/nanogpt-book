@@ -94,7 +94,38 @@ python train.py config/train_shakespeare_char.py --device=mps --compile=False
 
 `dropout` 是正则化。小数据微调时可以适当增加，预训练时常设为 0。
 
-## 7.6 如何看日志
+## 7.6 读者容易忽略的训练背景
+
+很多初学者会把“训练一次模型”理解成模型完整读完一遍数据。nanoGPT 不是这样组织的。它把 `train.bin` 看成一条连续 token 流，每次随机取很多长度为 `block_size` 的片段。训练进度主要用 iteration 和 token 数衡量，而不是 epoch。
+
+另一个容易混淆的概念是 batch。`batch_size=12` 不代表一次更新只看 12 个 token，而是 12 条序列。每条序列长度是 `block_size`。如果 `block_size=1024`，一个 micro batch 就有 12,288 个 token。再乘以 `gradient_accumulation_steps`，才是一次 optimizer step 的有效 token 数。
+
+还要区分“模型变大”和“上下文变长”。增大 `n_layer`、`n_head`、`n_embd` 主要增加模型容量。增大 `block_size` 主要让模型看见更长历史，但 attention 的计算和显存会明显增加。两者都会变慢，但原因不同。
+
+## 7.7 最小实验应该观察什么
+
+第一次跑最小训练时，不要期待生成文本变好。更合理的观察目标是：
+
+```text
+数据脚本能否生成 train.bin / val.bin / meta.pkl
+模型参数量是否符合配置变化
+step 0 是否能算出 train/val loss
+iter 日志是否持续输出
+out_dir 是否生成 checkpoint
+sample.py 是否能加载 checkpoint
+```
+
+这些是工程链路验证。只有链路稳定后，才值得讨论模型效果。
+
+## 7.8 什么时候该扩大模型
+
+如果 train loss 和 val loss 都很高，且训练时间足够，模型可能欠拟合，可以尝试增加模型容量或训练更久。
+
+如果 train loss 明显低于 val loss，模型已经开始记训练集，这时扩大模型通常会加重过拟合。更合理的方向是增加数据、提高 dropout、缩短训练或减小模型。
+
+如果训练很慢但 loss 正常下降，优先检查硬件和配置，不要盲目调学习率。速度问题和收敛问题要分开处理。
+
+## 7.9 如何看日志
 
 训练中常见日志：
 
@@ -109,7 +140,7 @@ iter 0: loss ..., time ..., mfu ...
 
 早期 loss 快速下降是正常的。后期下降变慢也是正常的。只要 val loss 总体下降，训练大概率在正常进行。
 
-## 7.7 从零训练和微调的区别
+## 7.10 从零训练和微调的区别
 
 从零训练：
 
@@ -129,7 +160,7 @@ init_from = 'gpt2'
 
 微调通常使用更小学习率，因为大模型已有有用表示，过大学习率可能破坏预训练知识。
 
-## 7.8 微调 Shakespeare
+## 7.11 微调 Shakespeare
 
 准备 BPE 版 Shakespeare 数据：
 
@@ -145,7 +176,7 @@ python train.py config/finetune_shakespeare.py
 
 字符级 Shakespeare 是从零训练小词表模型；这个微调实验则是用 GPT-2 tokenizer 和 GPT-2 权重。两者生成风格、训练速度和数据需求都不同。
 
-## 7.9 保存与采样
+## 7.12 保存与采样
 
 训练会在 `out_dir` 中保存 checkpoint。训练完后采样：
 
@@ -155,7 +186,7 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu
 
 采样结果不只受模型影响，也受 `temperature` 和 `top_k` 影响。评估模型时要固定采样参数，否则不同输出之间不容易比较。
 
-## 7.10 训练异常排查
+## 7.13 训练异常排查
 
 loss 变成 `nan`：
 
@@ -173,7 +204,7 @@ val loss 上升：
 
 可能是采样 temperature 太低，top-k 太小，或模型训练不足。
 
-## 7.11 本章实验
+## 7.14 本章实验
 
 建议记录三组训练：
 

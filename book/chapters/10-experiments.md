@@ -46,7 +46,25 @@ batch
 
 `代码提交` 很重要。没有版本记录，过几天就很难知道当时跑的到底是哪版代码。
 
-## 10.3 实验一：模型规模
+## 10.3 读者需要补上的实验常识
+
+实验不是把命令跑完就结束。一个有效实验至少包含：
+
+```text
+假设
+对照
+变量
+指标
+结论
+```
+
+假设是你预期会发生什么。对照是没有改动的 baseline。变量是本次唯一或主要改变的配置。指标是判断结果的证据。结论要说明假设是否成立。
+
+例如“把 `block_size` 从 64 改到 128 会降低 val loss，但会增加 iter time”就是一个可测试假设。只写“试试更大的 block_size”不是一个好实验。
+
+还要区分训练指标和生成指标。loss 更稳定、更容易比较；生成文本更直观，但受采样随机性影响。正式比较生成效果时，prompt、seed、temperature 和 top-k 都应该固定。
+
+## 10.4 实验一：模型规模
 
 目标：观察模型变大后 loss、速度和生成质量如何变化。
 
@@ -71,7 +89,7 @@ python train.py config/train_shakespeare_char.py --device=cpu --compile=False --
 - train loss 和 val loss 差距是否变大。
 - 生成文本是否更像训练集风格。
 
-## 10.4 实验二：上下文长度
+## 10.5 实验二：上下文长度
 
 目标：理解 `block_size` 的影响。
 
@@ -95,7 +113,7 @@ best val loss
 生成样例中的连贯性
 ```
 
-## 10.5 实验三：学习率
+## 10.6 实验三：学习率
 
 目标：找到稳定且下降较快的学习率范围。
 
@@ -112,7 +130,7 @@ best val loss
 
 学习率实验要固定模型、数据、batch 和训练步数，否则结论不清楚。
 
-## 10.6 实验四：采样参数
+## 10.7 实验四：采样参数
 
 目标：理解 temperature 和 top-k 如何影响生成。
 
@@ -133,7 +151,7 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --t
 
 采样实验不改变模型，只改变解码策略。它能帮助读者区分“模型能力”和“采样策略”的影响。
 
-## 10.7 实验五：换自己的数据
+## 10.8 实验五：换自己的数据
 
 目标：验证 nanoGPT 是否能学习新文本风格。
 
@@ -155,7 +173,7 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --t
 - 如果使用字符级 tokenizer，特殊字符和换行都会进入词表。
 - 如果换成 BPE，需要重新考虑 `meta.pkl` 和解码逻辑。
 
-## 10.8 实验六：过拟合观察
+## 10.9 实验六：过拟合观察
 
 目标：故意用小数据训练较大模型，观察 train loss 和 val loss 分离。
 
@@ -176,7 +194,38 @@ val loss 下降后上升
 
 这个实验能帮助读者理解为什么验证集重要。
 
-## 10.9 实验结论怎么写
+## 10.10 实验七：checkpoint 恢复
+
+目标：确认 checkpoint 不只是保存权重，而是能恢复训练状态。
+
+步骤：
+
+```text
+训练到少量 iter 并保存 checkpoint
+-> 记录 iter_num 和 best_val_loss
+-> 使用 init_from=resume 继续训练
+-> 检查日志是否从旧 iter 附近继续
+```
+
+这个实验能帮助读者理解为什么 checkpoint 里要保存 optimizer、config 和 iter_num。
+
+## 10.11 实验八：tokenizer 影响
+
+目标：比较字符级 Shakespeare 和 BPE Shakespeare 的差异。
+
+观察：
+
+```text
+vocab_size
+同一段文本的 token 数
+训练速度
+生成文本风格
+sample.py 是否需要 meta.pkl
+```
+
+这个实验能说明 tokenizer 不是无关紧要的预处理步骤，而是模型定义的一部分。
+
+## 10.12 实验结论怎么写
 
 不要只写“效果更好”。应该写具体证据：
 
@@ -189,4 +238,3 @@ block_size 从 64 增加到 128 后，best val loss 从 X 降到 Y，但 iter ti
 ## 本章小结
 
 实验设计是把源码学习转化为真实能力的关键。nanoGPT 足够小，适合做可控实验。每次实验都应该明确变量、记录命令和保留结论。
-
