@@ -2,63 +2,217 @@
 
 ## 本章目标
 
-理解 nanoGPT 如何把文本数据变成训练文件，以及字符级 tokenization 和 GPT-2 BPE tokenization 的区别。
+本章解释 nanoGPT 如何把原始文本变成训练需要的二进制 token 文件。读完后，读者应该能理解：
 
-## 为什么需要 Tokenization
+- 字符级 tokenizer 和 BPE tokenizer 的区别。
+- `train.bin`、`val.bin` 和 `meta.pkl` 分别保存什么。
+- 为什么训练时使用 `np.memmap`。
+- 如何为自己的文本数据创建新数据目录。
 
-神经网络只能处理数字。语言模型训练前，文本必须被编码成整数 token id。不同 tokenizer 会产生不同粒度的 token。
+对应源码位置：`data/shakespeare_char/prepare.py`、`data/shakespeare/prepare.py`、`data/openwebtext/prepare.py`、`train.py` 的 `get_batch`。
 
-## Shakespeare 字符级数据
+## 6.1 为什么不能直接训练字符串
 
-`data/shakespeare_char/prepare.py` 使用字符级编码：
+神经网络处理的是数字张量。文本必须先变成整数序列：
+
+```text
+文本 -> token -> token id -> Tensor
+```
+
+不同 tokenizer 会决定“一个 token 是什么”。字符级 tokenizer 把每个字符当成 token。BPE tokenizer 会把常见字符片段、词片段或单词编码成 token。
+
+这一步非常重要，因为模型看到的不是原始文字，而是 tokenizer 之后的 id 序列。
+
+## 6.2 Shakespeare 字符级数据
+
+`data/shakespeare_char/prepare.py` 是最适合学习的入口。它先下载 `input.txt`，然后找出全部字符：
 
 ```python
 chars = sorted(list(set(data)))
+vocab_size = len(chars)
+```
+
+接着建立双向映射：
+
+```python
 stoi = { ch:i for i,ch in enumerate(chars) }
 itos = { i:ch for i,ch in enumerate(chars) }
 ```
 
-这种方式非常适合教学：
+`stoi` 是 string-to-index，负责编码。`itos` 是 index-to-string，负责解码。
 
-- 词表小。
-- 数据准备快。
-- 不依赖复杂 tokenizer。
-- 生成结果容易观察。
+编码函数：
 
-缺点是序列更长，模型需要用更多 token 表达同样的文本。
+```python
+def encode(s):
+    return [stoi[c] for c in s]
+```
 
-## GPT-2 BPE 数据
+解码函数：
 
-`data/openwebtext/prepare.py` 使用 `tiktoken` 的 GPT-2 BPE：
+```python
+def decode(l):
+    return ''.join([itos[i] for i in l])
+```
+
+字符级方案的优点是透明。读者可以直接看到每个字符如何映射成整数。缺点是效率不高，因为表达同样一句话需要更多 token。
+
+## 6.3 train/val 切分
+
+脚本按 90/10 切分：
+
+```python
+n = len(data)
+train_data = data[:int(n*0.9)]
+val_data = data[int(n*0.9):]
+```
+
+训练集用于参数更新，验证集用于评估模型是否泛化。验证集不能参与训练，否则 val loss 就失去意义。
+
+对于时间顺序或文体连续的文本，这种简单切分可能导致训练和验证分布略有差异。作为教学实验可以接受，正式实验则需要更严谨地设计切分方法。
+
+## 6.4 写出 train.bin 和 val.bin
+
+脚本把 token id 转成 `uint16`：
+
+```python
+train_ids = np.array(train_ids, dtype=np.uint16)
+val_ids = np.array(val_ids, dtype=np.uint16)
+train_ids.tofile(os.path.join(os.path.dirname(__file__), 'train.bin'))
+val_ids.tofile(os.path.join(os.path.dirname(__file__), 'val.bin'))
+```
+
+为什么用 `uint16`？因为字符级词表很小，GPT-2 BPE 的最大 token id 也小于 `2**16`。用 `uint16` 比 `int64` 更省磁盘。
+
+训练时再转回 `int64`，因为 PyTorch embedding 层需要 long 类型索引。
+
+## 6.5 meta.pkl 的作用
+
+字符级脚本会保存：
+
+```python
+meta = {
+    'vocab_size': vocab_size,
+    'itos': itos,
+    'stoi': stoi,
+}
+```
+
+`train.py` 会读取 `meta.pkl` 中的 `vocab_size`，这样模型输出维度和数据词表一致。
+
+`sample.py` 会读取 `stoi` 和 `itos`，这样模型生成的 id 能被正确解码回字符。
+
+如果没有 `meta.pkl`，`sample.py` 会默认使用 GPT-2 tokenizer。这对字符级模型是错误的，所以字符级数据目录必须保留 `meta.pkl`。
+
+## 6.6 GPT-2 BPE 数据
+
+`data/openwebtext/prepare.py` 使用：
 
 ```python
 enc = tiktoken.get_encoding("gpt2")
+```
+
+处理每篇文本：
+
+```python
 ids = enc.encode_ordinary(example['text'])
 ids.append(enc.eot_token)
 ```
 
-BPE 的 token 粒度介于字符和单词之间，常见片段会合并为一个 token。这更接近 GPT-2 的训练方式。
+`encode_ordinary` 不处理特殊 token。脚本手动追加 `eot_token`，表示文档结束。
 
-## train.bin 与 val.bin
+BPE 的优势：
 
-准备脚本最终会把 token id 写成二进制文件：
+- 比字符级序列短。
+- 更接近 GPT-2 的预训练设置。
+- 常见词片段能被一个 token 表示。
+
+BPE 的代价：
+
+- 不像字符级那样直观。
+- tokenizer 本身成为模型行为的一部分。
+- 换 tokenizer 往往意味着不能直接复用旧模型的 embedding。
+
+## 6.7 OpenWebText 的大文件写入
+
+OpenWebText 数据很大。脚本用 memmap 写入：
 
 ```python
-train_ids.tofile(...)
-val_ids.tofile(...)
+arr = np.memmap(filename, dtype=dtype, mode='w+', shape=(arr_len,))
 ```
 
-训练时再用 `np.memmap` 读取。这样做的好处是大文件不必一次性读入内存，训练循环可以快速随机切片。
+然后分 shard 写入：
 
-## 数据切分
+```python
+for batch_idx in tqdm(range(total_batches)):
+    batch = dset.shard(...)
+    arr_batch = np.concatenate(batch['ids'])
+    arr[idx : idx + len(arr_batch)] = arr_batch
+```
 
-Shakespeare 字符级脚本按 90/10 切分训练和验证数据。OpenWebText 脚本则从训练集中抽出很小比例作为验证集。验证集不参与参数更新，只用于估计模型泛化效果。
+这样不需要把所有 token 一次性放进内存。
 
-## 常见问题
+## 6.8 训练时为什么用 np.memmap
 
-如果 `sample.py` 找到 `meta.pkl`，它会用训练数据对应的字符级编码器解码。否则默认使用 GPT-2 tokenizer。这解释了为什么字符级模型采样时需要保留 `meta.pkl`。
+`train.py` 的 `get_batch` 每次读取：
 
-## 小结
+```python
+data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
+```
 
-数据准备决定了模型看见的世界。训练同一个 GPT 结构时，字符级数据和 BPE 数据会产生非常不同的学习难度和生成风格。
+memmap 让大文件像数组一样被切片，但底层由操作系统按需加载。对于 OpenWebText 这种十几 GB 的文件，这比一次性读入内存更实际。
+
+`get_batch` 的随机切片方式假设数据已经是一条连续 token 流。它不关心文档边界，只负责随机抽取长度为 `block_size` 的片段。
+
+## 6.9 为自己的数据创建目录
+
+建议复制这个结构：
+
+```text
+data/my_dataset/
+  input.txt
+  prepare.py
+  readme.md
+```
+
+最小字符级 prepare 流程：
+
+```text
+读取 input.txt
+-> 构建字符词表
+-> 切分 train/val
+-> 编码成 id
+-> 写出 train.bin 和 val.bin
+-> 写出 meta.pkl
+```
+
+训练时指定：
+
+```sh
+python train.py --dataset=my_dataset
+```
+
+如果使用配置文件，则在 `config/train_my_dataset.py` 中设置：
+
+```python
+dataset = 'my_dataset'
+```
+
+## 6.10 常见错误
+
+`FileNotFoundError: train.bin`
+
+说明还没有运行对应数据目录下的 `prepare.py`。
+
+`vocab_size` 不匹配
+
+通常是 checkpoint 的模型结构和当前数据 tokenizer 不一致。字符级模型不能直接换成 GPT-2 BPE 数据继续训练，除非重新设计 embedding 和输出层。
+
+生成乱码
+
+可能是 `sample.py` 使用了错误的 tokenizer。检查 checkpoint 里的 dataset 配置，以及对应目录下是否有 `meta.pkl`。
+
+## 本章小结
+
+数据准备不是训练前的杂活，而是语言模型系统的一部分。tokenizer 决定了模型预测的基本单位，二进制文件决定了训练读取方式，`meta.pkl` 决定了训练和采样是否能使用同一套编码规则。
 

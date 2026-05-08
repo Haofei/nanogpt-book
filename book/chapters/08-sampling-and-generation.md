@@ -2,68 +2,208 @@
 
 ## 本章目标
 
-理解 `sample.py` 和 `GPT.generate` 如何把模型输出的 logits 变成文本。
+本章解释 `sample.py` 如何加载模型并生成文本。读者应该能理解 prompt 如何编码、logits 如何变成概率、temperature 和 top-k 如何影响输出，以及为什么生成过程必须一个 token 一个 token 地进行。
 
-## 加载模型
+对应源码位置：`sample.py`、`model.py` 的 `GPT.generate`。
 
-`sample.py` 支持两种来源：
+## 8.1 训练和生成的差异
 
-- `--init_from=resume`：从本地 checkpoint 加载自己训练的模型。
-- `--init_from=gpt2`、`gpt2-medium`、`gpt2-large`、`gpt2-xl`：加载 GPT-2 权重。
+训练时，模型一次处理完整序列，并为每个位置计算 loss：
 
-本地模型命令示例：
-
-```sh
-python sample.py --out_dir=out-shakespeare-char --device=cpu
+```text
+输入 x: B x T
+目标 y: B x T
+输出 logits: B x T x vocab_size
 ```
 
-GPT-2 权重示例：
+生成时，未来 token 不存在。模型只能根据已有 prompt 预测下一个 token，采样后再把新 token 拼回上下文。
 
-```sh
-python sample.py --init_from=gpt2 --start="Once upon a time" --max_new_tokens=100
+生成链路：
+
+```text
+prompt text
+-> encode
+-> token ids
+-> model.generate
+-> decode
+-> generated text
 ```
 
-## Prompt 编码
+## 8.2 sample.py 的配置
 
-如果 prompt 以 `FILE:` 开头，`sample.py` 会从文件读取内容。否则直接把命令行字符串作为 prompt。
+`sample.py` 顶部定义：
 
-编码器选择逻辑：
+```python
+init_from = 'resume'
+out_dir = 'out'
+start = "\n"
+num_samples = 10
+max_new_tokens = 500
+temperature = 0.8
+top_k = 200
+device = 'cuda'
+```
 
-- 找到训练数据的 `meta.pkl`：使用该数据集自己的编码器。
-- 找不到：默认使用 GPT-2 tokenizer。
+这些都可以用命令行覆盖：
 
-## Temperature
+```sh
+python sample.py --out_dir=out-shakespeare-char --device=cpu --num_samples=3 --max_new_tokens=200
+```
 
-temperature 控制 logits 的缩放：
+采样脚本也使用 `configurator.py`，所以覆盖方式和训练脚本一致。
+
+## 8.3 加载本地 checkpoint
+
+默认路径：
+
+```python
+ckpt_path = os.path.join(out_dir, 'ckpt.pt')
+checkpoint = torch.load(ckpt_path, map_location=device)
+gptconf = GPTConfig(**checkpoint['model_args'])
+model = GPT(gptconf)
+model.load_state_dict(state_dict)
+```
+
+这里先从 checkpoint 读取 `model_args`，再构造同样结构的模型，最后加载权重。
+
+这说明采样不能只拿到权重。模型结构也必须和训练时一致。
+
+## 8.4 加载 GPT-2 权重
+
+如果：
+
+```sh
+python sample.py --init_from=gpt2 --start="Once upon a time"
+```
+
+代码会走：
+
+```python
+model = GPT.from_pretrained(init_from, dict(dropout=0.0))
+```
+
+这种模式不需要本地 checkpoint，直接从 Hugging Face 加载 GPT-2 系列权重。
+
+## 8.5 Prompt 如何编码
+
+如果 `start` 以 `FILE:` 开头：
+
+```python
+with open(start[5:], 'r', encoding='utf-8') as f:
+    start = f.read()
+```
+
+否则直接使用命令行里的字符串。
+
+编码器选择：
+
+```text
+如果 checkpoint 指向的数据目录有 meta.pkl -> 使用 meta.pkl 中的 stoi/itos
+否则 -> 默认 GPT-2 tokenizer
+```
+
+字符级模型必须使用自己的 `meta.pkl`。GPT-2 模型或 BPE 数据通常使用 `tiktoken`。
+
+## 8.6 generate 的核心循环
+
+`GPT.generate` 每次循环生成一个 token：
+
+```python
+idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
+logits, _ = self(idx_cond)
+logits = logits[:, -1, :] / temperature
+probs = F.softmax(logits, dim=-1)
+idx_next = torch.multinomial(probs, num_samples=1)
+idx = torch.cat((idx, idx_next), dim=1)
+```
+
+注意两点。
+
+第一，`idx_cond` 会裁剪上下文。模型不能处理超过 `block_size` 的序列，所以长文本生成时只能使用最近的一段上下文。
+
+第二，采样只使用最后位置的 logits。因为我们只需要预测下一个 token。
+
+## 8.7 Temperature
+
+temperature 作用在 logits 上：
 
 ```python
 logits = logits[:, -1, :] / temperature
 ```
 
-较低 temperature 会让分布更尖锐，输出更保守。较高 temperature 会让分布更平，输出更多样，但也更容易跑偏。
+当 `temperature < 1`，logits 差距被放大，概率分布更尖锐，输出更稳定但可能更重复。
 
-## Top-k
+当 `temperature > 1`，logits 差距被缩小，概率分布更平，输出更多样但可能更混乱。
 
-top-k 会只保留概率最高的 k 个候选 token：
+常用实验范围：
+
+```text
+0.6, 0.8, 1.0, 1.2
+```
+
+## 8.8 Top-k
+
+top-k 会保留最高的 k 个候选：
 
 ```python
 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
 logits[logits < v[:, [-1]]] = -float('Inf')
 ```
 
-这能减少极低概率 token 被采样到的机会，让生成更稳定。
+被设为负无穷的 logits 在 softmax 后概率为 0。
 
-## 自回归循环
+top-k 的直觉是：不让模型从极低概率 token 中采样。它能提升输出稳定性，但太小会降低多样性。
 
-`generate` 每次只生成一个 token：
+## 8.9 贪心、采样和可重复性
 
-```text
-输入当前序列 -> 得到最后位置 logits -> 采样一个 token -> 拼到序列末尾 -> 重复
+nanoGPT 使用：
+
+```python
+torch.multinomial(probs, num_samples=1)
 ```
 
-当序列超过 `block_size` 时，只保留最近的上下文。这是因为模型的 position embedding 和 attention mask 都有最大长度限制。
+这意味着它是采样，不是每次取最大概率 token。相同 prompt 也可能生成不同结果。
 
-## 小结
+为了提高可重复性，可以固定：
 
-生成文本不是一次性输出整段文章，而是不断重复 next-token prediction。temperature 和 top-k 是控制生成风格的两个基础旋钮。
+```sh
+--seed=1337
+```
+
+但不同硬件和不同 PyTorch 后端仍可能存在细微差异。
+
+## 8.10 采样实验
+
+固定模型和 prompt，比较参数：
+
+```sh
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=0.6 --top_k=50
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=0.8 --top_k=200
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=1.2 --top_k=500
+```
+
+记录：
+
+- 是否重复。
+- 是否语法更稳定。
+- 是否出现更多新词或奇怪字符。
+- 是否保持 Shakespeare 风格。
+
+## 8.11 常见问题
+
+为什么 prompt 很长时前面的内容好像被忘了？
+
+模型最多只能看到 `block_size` 长度的上下文。超过后，`generate` 会裁剪掉最早的 token。
+
+为什么输出乱码？
+
+优先检查 tokenizer 是否匹配。字符级 checkpoint 需要对应数据目录的 `meta.pkl`。
+
+为什么输出每次不同？
+
+因为使用概率采样。降低 temperature、降低 top-k 或固定 seed 可以让输出更稳定。
+
+## 本章小结
+
+文本生成的本质是反复执行 next-token prediction。`sample.py` 负责加载模型和编码 prompt，`generate` 负责循环采样。temperature 和 top-k 是最基础也最重要的生成控制参数。
 

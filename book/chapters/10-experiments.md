@@ -2,67 +2,191 @@
 
 ## 本章目标
 
-把 nanoGPT 从阅读对象变成实验平台。通过小实验理解模型规模、数据、上下文长度和采样参数的影响。
+本章把 nanoGPT 变成实验平台。重点不是“跑更多命令”，而是训练读者建立实验纪律：一次只改少数变量，记录现象，根据证据调整下一步。
 
-## 实验一：缩小模型
+## 10.1 为什么需要实验设计
 
-从 Shakespeare 字符级训练开始，固定数据和训练步数，只修改：
-
-- `n_layer`
-- `n_head`
-- `n_embd`
-
-观察参数量、训练速度、train loss 和 val loss。这个实验能帮助你建立模型容量和过拟合之间的直觉。
-
-## 实验二：修改上下文长度
-
-比较 `block_size=32`、`64`、`128`、`256`。上下文越长，模型能利用的信息越多，但 attention 成本也更高。对于字符级 Shakespeare，较长上下文通常能改善局部一致性。
-
-## 实验三：学习率扫描
-
-在同一配置下尝试几个学习率：
+语言模型训练结果受很多因素影响：
 
 ```text
-1e-4, 3e-4, 6e-4, 1e-3
+数据
+tokenizer
+模型规模
+上下文长度
+batch
+学习率
+训练步数
+采样参数
+硬件后端
 ```
 
-记录 loss 曲线。学习率过高时训练可能震荡或发散；过低时下降缓慢。
+如果一次改动太多，即使结果变好，也不知道原因是什么。好的实验应该有明确假设、固定对照和可复现记录。
 
-## 实验四：采样参数
+## 10.2 实验记录模板
 
-训练同一个模型后，用不同参数采样：
-
-```sh
-python sample.py --out_dir=out-shakespeare-char --temperature=0.6 --top_k=50
-python sample.py --out_dir=out-shakespeare-char --temperature=1.0 --top_k=200
-python sample.py --out_dir=out-shakespeare-char --temperature=1.2 --top_k=500
-```
-
-比较输出的稳定性、多样性和错误率。
-
-## 实验五：换自己的数据
-
-复制一个 `data/shakespeare_char` 风格的数据目录，把 `input.txt` 换成自己的文本，再复用 prepare 逻辑生成 `train.bin`、`val.bin` 和 `meta.pkl`。
-
-## 实验记录模板
-
-每次实验建议记录：
+每次实验建议写成：
 
 ```text
-目标：
-代码版本：
+实验名称：
+问题/假设：
+代码提交：
 数据集：
+训练命令：
 配置变更：
 硬件：
-训练命令：
-关键日志：
+开始时间：
+结束时间：
 最好 val loss：
+采样命令：
 生成样例：
+观察：
 结论：
 下一步：
 ```
 
-## 小结
+`代码提交` 很重要。没有版本记录，过几天就很难知道当时跑的到底是哪版代码。
 
-学习模型训练不能只看最终 loss。更重要的是建立实验纪律：一次只改少数变量，记录现象，再根据证据调整配置。
+## 10.3 实验一：模型规模
+
+目标：观察模型变大后 loss、速度和生成质量如何变化。
+
+固定数据和训练步数，比较：
+
+```text
+small:  n_layer=2, n_head=2, n_embd=64
+medium: n_layer=4, n_head=4, n_embd=128
+large:  n_layer=6, n_head=6, n_embd=384
+```
+
+示例命令：
+
+```sh
+python train.py config/train_shakespeare_char.py --device=cpu --compile=False --max_iters=500 --eval_iters=20 --n_layer=2 --n_head=2 --n_embd=64
+```
+
+观察：
+
+- 参数量如何变化。
+- 每次迭代时间如何变化。
+- train loss 和 val loss 差距是否变大。
+- 生成文本是否更像训练集风格。
+
+## 10.4 实验二：上下文长度
+
+目标：理解 `block_size` 的影响。
+
+比较：
+
+```text
+block_size=32
+block_size=64
+block_size=128
+block_size=256
+```
+
+上下文越长，模型能看到更长历史，但 attention 成本更高。字符级模型尤其依赖较长上下文来维持单词和句子结构。
+
+记录每组：
+
+```text
+tokens_per_iter
+iter time
+best val loss
+生成样例中的连贯性
+```
+
+## 10.5 实验三：学习率
+
+目标：找到稳定且下降较快的学习率范围。
+
+比较：
+
+```text
+1e-4
+3e-4
+6e-4
+1e-3
+```
+
+学习率太低，loss 下降慢。学习率太高，loss 可能震荡、发散或出现 `nan`。
+
+学习率实验要固定模型、数据、batch 和训练步数，否则结论不清楚。
+
+## 10.6 实验四：采样参数
+
+目标：理解 temperature 和 top-k 如何影响生成。
+
+固定同一个 checkpoint 和 prompt：
+
+```sh
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=0.6 --top_k=50
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=0.8 --top_k=200
+python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --temperature=1.2 --top_k=500
+```
+
+比较：
+
+- 重复程度。
+- 语法稳定性。
+- 新颖程度。
+- 是否出现异常 token。
+
+采样实验不改变模型，只改变解码策略。它能帮助读者区分“模型能力”和“采样策略”的影响。
+
+## 10.7 实验五：换自己的数据
+
+目标：验证 nanoGPT 是否能学习新文本风格。
+
+步骤：
+
+```text
+复制 data/shakespeare_char
+-> 替换 input.txt
+-> 运行 prepare.py
+-> 新建 config/train_my_dataset.py
+-> 训练
+-> 采样
+```
+
+注意事项：
+
+- 数据太少容易过拟合。
+- 文本清洗会影响生成质量。
+- 如果使用字符级 tokenizer，特殊字符和换行都会进入词表。
+- 如果换成 BPE，需要重新考虑 `meta.pkl` 和解码逻辑。
+
+## 10.8 实验六：过拟合观察
+
+目标：故意用小数据训练较大模型，观察 train loss 和 val loss 分离。
+
+现象：
+
+```text
+train loss 持续下降
+val loss 下降后上升
+生成内容更像背诵训练集
+```
+
+处理方法：
+
+- 增加数据。
+- 减小模型。
+- 增加 dropout。
+- 提前停止训练。
+
+这个实验能帮助读者理解为什么验证集重要。
+
+## 10.9 实验结论怎么写
+
+不要只写“效果更好”。应该写具体证据：
+
+```text
+block_size 从 64 增加到 128 后，best val loss 从 X 降到 Y，但 iter time 从 A 增加到 B。采样中长句结构更稳定，但训练成本增加。
+```
+
+好的结论应该同时包含收益、代价和下一步。
+
+## 本章小结
+
+实验设计是把源码学习转化为真实能力的关键。nanoGPT 足够小，适合做可控实验。每次实验都应该明确变量、记录命令和保留结论。
 

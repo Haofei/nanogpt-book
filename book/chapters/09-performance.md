@@ -2,56 +2,183 @@
 
 ## 本章目标
 
-理解 nanoGPT 中和性能相关的主要设计：混合精度、TF32、Flash Attention、梯度累积、DDP、`torch.compile` 和 MFU。
+本章解释 nanoGPT 中主要性能设计。读者应该能理解训练速度和显存受哪些因素影响，以及 `torch.compile`、混合精度、Flash Attention、梯度累积和 DDP 各自解决什么问题。
 
-## 混合精度
+对应源码位置：`train.py`、`model.py`、`bench.py`。
 
-`train.py` 根据设备能力选择 `bfloat16` 或 `float16`，并用 autocast 包裹前向计算：
+## 9.1 性能不是单一指标
+
+训练性能至少包含四类问题：
+
+```text
+能不能放进显存
+每秒能处理多少 token
+多卡通信是否成为瓶颈
+训练结果是否仍然稳定
+```
+
+一个配置可能速度很快但 loss 不稳定，也可能 loss 正常但吞吐很低。优化时要同时记录训练质量和运行效率。
+
+## 9.2 显存主要花在哪里
+
+Transformer 训练显存主要来自：
+
+- 模型参数。
+- optimizer 状态。
+- 激活值。
+- attention 中间结果。
+- batch 数据。
+
+扩大 `n_layer`、`n_embd` 会增加参数和激活。扩大 `block_size` 会显著增加 attention 成本。扩大 `batch_size` 会线性增加激活显存。
+
+因此显存不够时，常见处理顺序是：
+
+```text
+降低 batch_size
+-> 增加 gradient_accumulation_steps 保持有效 batch
+-> 降低 block_size
+-> 缩小模型
+-> 使用混合精度
+```
+
+## 9.3 混合精度
+
+`train.py` 根据设备选择 dtype：
+
+```python
+dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
+```
+
+然后用 autocast：
 
 ```python
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 ```
 
-混合精度能减少显存占用并提升吞吐，但需要注意数值稳定性。`float16` 路径还会使用 `GradScaler`。
+混合精度让部分矩阵计算使用更低精度，通常能提升速度并减少显存。
 
-## TF32
+`bfloat16` 动态范围更大，通常比 `float16` 更稳定。`float16` 路径使用 `GradScaler` 防止梯度下溢。
 
-代码开启：
+## 9.4 TF32
+
+CUDA 路径开启：
 
 ```python
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 ```
 
-TF32 是 NVIDIA Ampere 及之后 GPU 上常见的加速选项，通常能在可接受精度下提高矩阵乘法速度。
+TF32 是 NVIDIA Ampere 及以后 GPU 上的矩阵计算格式。它在很多深度学习任务中能用较小精度代价换取更高吞吐。
 
-## Flash Attention
+读者不需要手动管理每个算子。理解重点是：同样的 PyTorch 代码，在不同硬件和后端上可能有不同性能表现。
 
-`model.py` 会检测 PyTorch 是否有 `scaled_dot_product_attention`。如果有，就使用更高效的 attention 实现。attention 的显存压力通常随 `T x T` 增长，因此长上下文训练时这类优化非常重要。
+## 9.5 Flash Attention
 
-## 梯度累积
+`model.py` 中：
 
-当显存放不下大 batch 时，可以用多个 micro batch 累积梯度。有效 token 数为：
+```python
+self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+```
+
+如果可用，attention 前向使用：
+
+```python
+torch.nn.functional.scaled_dot_product_attention(..., is_causal=True)
+```
+
+Flash Attention 的价值在于更高效地计算 attention，尤其减少显存读写。对于长上下文，attention 的 `T x T` 结构会成为瓶颈，因此高效 attention 实现非常重要。
+
+## 9.6 torch.compile
+
+`train.py` 中：
+
+```python
+if compile:
+    model = torch.compile(model)
+```
+
+`torch.compile` 会尝试编译模型图，减少 Python 开销并优化算子执行。它常在 GPU 上带来收益，但有首次编译成本。
+
+调试、小模型、CPU 环境中，建议先设：
+
+```sh
+--compile=False
+```
+
+等链路稳定后再打开。
+
+## 9.7 梯度累积
+
+有效 token 数：
 
 ```text
 gradient_accumulation_steps * world_size * batch_size * block_size
 ```
 
-这也是 `train.py` 打印 `tokens per iteration` 的来源。
+显存限制的是单个 micro batch，不一定限制有效 batch。通过梯度累积，可以用多个小 batch 模拟一个大 batch。
 
-## DDP
+代价是每次 optimizer step 需要更多前向和反向，所以 wall-clock 时间会增加。
 
-DDP 通过多个进程并行训练。每个进程处理不同 batch，反向传播时同步梯度。`nanoGPT` 还在 micro step 中控制 `require_backward_grad_sync`，只在最后一次 micro step 同步，避免不必要通信。
+## 9.8 DDP
 
-## torch.compile
+DDP 的基本思想：
 
-`torch.compile(model)` 会尝试编译模型图，提高运行速度。它可能带来首次编译开销，也可能因为环境问题失败。因此 CPU 或调试环境中常用 `--compile=False`。
+```text
+每个 GPU 一个进程
+每个进程处理不同数据
+反向传播后同步梯度
+每个进程更新同样的模型参数
+```
 
-## MFU
+nanoGPT 通过 `torchrun` 启动。单机 4 卡示例：
 
-`estimate_mfu` 估算模型实际 FLOPS 与 A100 理论峰值的比例。它不是绝对精确的性能指标，但能帮助比较不同配置的吞吐效率。
+```sh
+torchrun --standalone --nproc_per_node=4 train.py
+```
 
-## 小结
+多机训练还需要指定 master 地址和节点 rank。
 
-性能优化不是单一技巧，而是由数据读取、矩阵计算、attention 实现、精度、batch 组织和多卡通信共同决定。
+DDP 的瓶颈常常是通信。如果网络慢，多卡效率会很差。不是 GPU 数量翻倍，训练速度就一定翻倍。
+
+## 9.9 MFU
+
+`estimate_mfu` 估算 Model FLOPs Utilization。它把理论 FLOPs 和实际每秒迭代速度结合起来，估计 A100 峰值算力利用率。
+
+MFU 的作用是比较不同配置或优化的相对效率。它不是模型质量指标，也不是跨硬件绝对公平的指标。
+
+## 9.10 bench.py 的作用
+
+`bench.py` 把训练核心计算抽出来，减少日志、checkpoint、评估等干扰。它适合回答：
+
+- 当前模型前向/反向有多快。
+- `torch.compile` 是否有效。
+- 不同 dtype 性能差异如何。
+- batch size 改变后吞吐如何变化。
+
+性能实验应该尽量隔离变量。不要同时改模型大小、dtype、compile 和 batch size，否则很难判断是哪一个改变带来了效果。
+
+## 9.11 性能实验记录模板
+
+```text
+硬件：
+PyTorch 版本：
+device：
+dtype：
+compile：
+模型配置：
+batch_size：
+block_size：
+gradient_accumulation_steps：
+tokens_per_iter：
+iter time：
+MFU：
+best val loss：
+结论：
+```
+
+把训练质量和速度一起记录，才能避免只优化吞吐而损害模型效果。
+
+## 本章小结
+
+nanoGPT 的性能设计并不复杂，但覆盖了现代训练的关键主题：混合精度、编译、高效 attention、梯度累积和分布式同步。理解这些机制后，读者才能根据自己的硬件条件合理缩放模型。
 
