@@ -6,6 +6,10 @@
 
 对应源码位置：`code/nanogpt/model.py`。
 
+## 本章在全书中的位置
+
+上一章我们看到了 nanoGPT 的四条链路：数据、模型、训练、生成。本章专门补模型链路的背景知识。你在 00c 里已经训练过一个很小的 Shakespeare 模型，本章解释这个模型内部为什么需要 embedding、attention、MLP 和 causal mask。
+
 ## 2.1 语言模型在做什么
 
 GPT 类语言模型的训练目标是预测下一个 token。
@@ -260,4 +264,4 @@ logits: B x T x vocab_size
 
 ## 本章小结
 
-Transformer 的核心不是神秘公式，而是一组可追踪的张量变换。token embedding 把 id 变成向量，position embedding 加入顺序信息，causal self-attention 读取历史上下文，MLP 增强每个位置的表达，残差和 LayerNorm 保持训练稳定。
+Transformer 的核心不是神秘公式，而是一组可追踪的张量变换。token embedding 把 id 变成向量，position embedding 加入顺序信息，causal self-attention 读取历史上下文，MLP 增强每个位置的表达，残差和 LayerNorm 保持训练稳定。下一章会把这些积木组合成 GPT 的整体结构。

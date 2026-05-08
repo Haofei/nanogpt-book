@@ -6,6 +6,10 @@
 
 对应源码位置：`code/nanogpt/sample.py`、`code/nanogpt/model.py` 的 `GPT.generate`。
 
+## 本章在全书中的位置
+
+第 7 章结束时，我们已经能训练并保存 checkpoint。本章接着走完整闭环的最后一步：用 `sample.py` 读取 checkpoint，把 prompt 编码成 token id，再让模型一个 token 一个 token 地生成文本。贯穿案例仍然可以使用 `out-shakespeare-char`。
+
 ## 8.1 训练和生成的差异
 
 训练时，模型一次处理完整序列，并为每个位置计算 loss：
@@ -215,4 +219,4 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --t
 
 ## 本章小结
 
-文本生成的本质是反复执行 next-token prediction。`sample.py` 负责加载模型和编码 prompt，`generate` 负责循环采样。temperature 和 top-k 是最基础也最重要的生成控制参数。
+文本生成的本质是反复执行 next-token prediction。`sample.py` 负责加载模型和编码 prompt，`generate` 负责循环采样。temperature 和 top-k 是最基础也最重要的生成控制参数。到这里，数据、模型、训练、采样的主闭环已经完成；后面的章节会讨论性能、实验设计和扩展。

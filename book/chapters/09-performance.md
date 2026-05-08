@@ -6,6 +6,10 @@
 
 对应源码位置：`code/nanogpt/train.py`、`code/nanogpt/model.py`、`code/nanogpt/bench.py`。
 
+## 本章在全书中的位置
+
+前面章节已经跑通了完整训练和采样闭环。本章不改变模型目标，而是解释同一套训练为什么在 CPU、MPS、CUDA、单卡和多卡上表现不同。你可以把它看成“当 Shakespeare 小实验跑通后，如何理解速度和显存”的章节。
+
 ## 9.1 性能不是单一指标
 
 训练性能至少包含四类问题：
@@ -212,4 +216,4 @@ python -c "import torch; print(torch.cuda.is_available()); print(torch.backends.
 
 ## 本章小结
 
-nanoGPT 的性能设计并不复杂，但覆盖了现代训练的关键主题：混合精度、编译、高效 attention、梯度累积和分布式同步。理解这些机制后，读者才能根据自己的硬件条件合理缩放模型。
+nanoGPT 的性能设计并不复杂，但覆盖了现代训练的关键主题：混合精度、编译、高效 attention、梯度累积和分布式同步。理解这些机制后，读者才能根据自己的硬件条件合理缩放模型。下一章会把这些配置变化放进实验框架里，避免凭感觉乱调。

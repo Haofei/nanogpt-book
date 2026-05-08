@@ -11,6 +11,10 @@
 
 对应源码位置：`code/nanogpt/data/shakespeare_char/prepare.py`、`code/nanogpt/data/shakespeare/prepare.py`、`code/nanogpt/data/openwebtext/prepare.py`、`code/nanogpt/train.py` 的 `get_batch`。
 
+## 本章在全书中的位置
+
+第 5 章解释了 `train.py` 如何从 `train.bin` 和 `val.bin` 取 batch。本章解释这些文件从哪里来。贯穿案例仍然是 00c 中的 Shakespeare 字符级数据：我们先理解它为什么简单，再对比 GPT-2 BPE 和 OpenWebText。
+
 ## 6.1 为什么不能直接训练字符串
 
 神经网络处理的是数字张量。文本必须先变成整数序列：
@@ -240,4 +244,4 @@ train/val 是否意外重复
 
 ## 本章小结
 
-数据准备不是训练前的杂活，而是语言模型系统的一部分。tokenizer 决定了模型预测的基本单位，二进制文件决定了训练读取方式，`meta.pkl` 决定了训练和采样是否能使用同一套编码规则。
+数据准备不是训练前的杂活，而是语言模型系统的一部分。tokenizer 决定了模型预测的基本单位，二进制文件决定了训练读取方式，`meta.pkl` 决定了训练和采样是否能使用同一套编码规则。下一章会把模型、训练脚本和数据合在一起，讨论如何选择配置、从零训练和微调。

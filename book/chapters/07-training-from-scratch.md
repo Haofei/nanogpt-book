@@ -6,6 +6,10 @@
 
 对应源码位置：`code/nanogpt/train.py`、`code/nanogpt/config/train_shakespeare_char.py`、`code/nanogpt/config/finetune_shakespeare.py`、`code/nanogpt/config/train_gpt2.py`。
 
+## 本章在全书中的位置
+
+到这里，你已经分别理解了模型、训练脚本和数据。本章把它们重新合成一个可操作流程：继续以 Shakespeare 字符级模型为主线，解释如何从最小 1 step 验证走向真正训练，以及什么时候该尝试微调 GPT-2。
+
 ## 7.1 三种训练任务
 
 nanoGPT 常见任务可以分成三类：
@@ -218,4 +222,4 @@ val loss 上升：
 
 ## 本章小结
 
-训练 nanoGPT 的关键不是记住某条命令，而是理解命令背后的资源约束和实验目标。小实验用于学习链路，微调用于迁移能力，大规模预训练用于复现模型能力。三者的参数选择逻辑不同。
+训练 nanoGPT 的关键不是记住某条命令，而是理解命令背后的资源约束和实验目标。小实验用于学习链路，微调用于迁移能力，大规模预训练用于复现模型能力。三者的参数选择逻辑不同。下一章会使用训练得到的 checkpoint，解释文本生成和采样参数。

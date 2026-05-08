@@ -6,6 +6,10 @@
 
 对应源码位置：`code/nanogpt/model.py` 的 `GPT` 类。
 
+## 本章在全书中的位置
+
+上一章解释了 Transformer 的基本积木。本章把这些积木拼成 GPT：输入 token id，经过 embedding 和多层 Block，最后输出下一个 token 的 logits。这样读第 4 章时，你看到的就不再是一堆类定义，而是一张已经建立好的结构图。
+
 ## 3.1 GPT 是 Decoder-only Transformer
 
 GPT 属于 decoder-only Transformer。它只使用 Transformer 解码器风格的堆叠结构，并通过 causal mask 保证只能看左侧上下文。
@@ -187,4 +191,4 @@ vocab_size：词表大小
 
 ## 本章小结
 
-GPT 是一个自回归 decoder-only Transformer。它把 token id 转成向量，经过多层 causal Transformer Block，再投影到词表空间。训练时并行预测每个位置的下一个 token，生成时循环预测最后一个位置的下一个 token。
+GPT 是一个自回归 decoder-only Transformer。它把 token id 转成向量，经过多层 causal Transformer Block，再投影到词表空间。训练时并行预测每个位置的下一个 token，生成时循环预测最后一个位置的下一个 token。下一章进入 `model.py`，把这张架构图逐段落到源码和 shape。

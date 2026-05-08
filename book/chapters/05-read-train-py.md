@@ -13,6 +13,10 @@
 
 对应源码位置：`code/nanogpt/train.py`。
 
+## 本章在全书中的位置
+
+上一章我们只看了模型如何从 token id 算出 logits 和 loss。本章把模型放回你在 00c 跑过的训练命令里：数据如何变成 batch，loss 如何反向传播，optimizer 如何更新参数，checkpoint 为什么能恢复训练。
+
 ## 5.1 train.py 的主线
 
 `train.py` 可以分成七段：
@@ -370,4 +374,4 @@ python train.py config/train_shakespeare_char.py --device=cpu --compile=False --
 
 ## 本章小结
 
-`train.py` 把训练系统压缩在一个脚本里。它的核心不是 while 循环本身，而是配置、数据、模型初始化、评估、优化和 checkpoint 之间的协作。读懂它以后，读者就能把 nanoGPT 从“能跑的代码”变成“可调试、可实验的训练平台”。
+`train.py` 把训练系统压缩在一个脚本里。它的核心不是 while 循环本身，而是配置、数据、模型初始化、评估、优化和 checkpoint 之间的协作。读懂它以后，读者就能把 nanoGPT 从“能跑的代码”变成“可调试、可实验的训练平台”。下一章会回到训练的起点：文本数据和 tokenizer。
