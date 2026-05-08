@@ -16,9 +16,10 @@
 
 建议按顺序阅读：
 
-1. 先读第 1-3 章，建立项目和 Transformer 的整体地图。
-2. 再读第 4-8 章，对应源码中的 `model.py`、`train.py`、数据脚本和 `sample.py`。
-3. 最后读第 9-11 章，把项目扩展为自己的训练实验。
+1. 先读第 00a-00c 章，把环境、PyTorch 最小基础和第一次运行打通。
+2. 再读第 1-3 章，建立项目和 Transformer 的整体地图。
+3. 接着读第 4-8 章，对应源码中的 `model.py`、`train.py`、数据脚本和 `sample.py`。
+4. 最后读第 9-11 章，把项目扩展为自己的训练实验。
 
 每章都遵循相同结构：本章目标、源码位置、核心概念、代码导读、实验建议、常见问题和小结。
 
@@ -44,6 +45,9 @@ cd code/nanogpt
 ## 目录
 
 - [00 前言](chapters/00-preface.md)
+- [00a 环境准备与项目运行](chapters/00a-environment-setup.md)
+- [00b PyTorch 和张量最小基础](chapters/00b-pytorch-tensor-basics.md)
+- [00c 第一次跑通 nanoGPT](chapters/00c-first-run-walkthrough.md)
 - [01 nanoGPT 是什么](chapters/01-what-is-nanogpt.md)
 - [02 Transformer 必备知识](chapters/02-transformer-basics.md)
 - [03 GPT 架构总览](chapters/03-gpt-architecture.md)

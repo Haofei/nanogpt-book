@@ -60,7 +60,9 @@
 第一遍阅读：
 
 ```text
-跑通 Shakespeare 字符级训练
+准备 Python 环境
+-> 理解 Tensor / shape / device
+-> 跑通 Shakespeare 字符级训练
 -> 看懂 model.py 的 forward
 -> 看懂 train.py 的 get_batch 和训练循环
 -> 用 sample.py 生成文本
@@ -83,7 +85,7 @@
 -> 设计成体系的实验
 ```
 
-不要第一天就试图复现 GPT-2。先用小实验建立直觉。
+不要第一天就试图复现 GPT-2。先读 00a-00c 三章，用小实验建立直觉。
 
 ## 0.6 环境准备
 

@@ -2,6 +2,9 @@
 
 - [从零读懂 nanoGPT](README.md)
 - [00 前言](chapters/00-preface.md)
+- [00a 环境准备与项目运行](chapters/00a-environment-setup.md)
+- [00b PyTorch 和张量最小基础](chapters/00b-pytorch-tensor-basics.md)
+- [00c 第一次跑通 nanoGPT](chapters/00c-first-run-walkthrough.md)
 - [01 nanoGPT 是什么](chapters/01-what-is-nanogpt.md)
 - [02 Transformer 必备知识](chapters/02-transformer-basics.md)
 - [03 GPT 架构总览](chapters/03-gpt-architecture.md)
