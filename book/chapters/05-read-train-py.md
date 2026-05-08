@@ -11,7 +11,7 @@
 - checkpoint 保存了哪些内容，为什么不只保存模型权重。
 - DDP 模式下每个进程如何分工。
 
-对应源码位置：`train.py`。
+对应源码位置：`code/nanogpt/train.py`。
 
 ## 5.1 train.py 的主线
 
@@ -340,6 +340,7 @@ model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 
 为了理解训练循环，可以跑最小命令：
 
 ```sh
+cd code/nanogpt
 python data/shakespeare_char/prepare.py
 python train.py config/train_shakespeare_char.py --device=cpu --compile=False --max_iters=1 --eval_iters=1 --batch_size=2 --block_size=8 --n_layer=1 --n_head=2 --n_embd=16
 ```
@@ -370,4 +371,3 @@ python train.py config/train_shakespeare_char.py --device=cpu --compile=False --
 ## 本章小结
 
 `train.py` 把训练系统压缩在一个脚本里。它的核心不是 while 循环本身，而是配置、数据、模型初始化、评估、优化和 checkpoint 之间的协作。读懂它以后，读者就能把 nanoGPT 从“能跑的代码”变成“可调试、可实验的训练平台”。
-

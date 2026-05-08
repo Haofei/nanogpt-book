@@ -96,6 +96,7 @@ pip install torch numpy transformers datasets tiktoken wandb tqdm
 最小验证：
 
 ```sh
+cd code/nanogpt
 python data/shakespeare_char/prepare.py
 python train.py config/train_shakespeare_char.py --device=cpu --compile=False --max_iters=1 --eval_iters=1 --batch_size=2 --block_size=8 --n_layer=1 --n_head=2 --n_embd=16
 ```
@@ -123,4 +124,3 @@ python train.py config/train_shakespeare_char.py --device=cpu --compile=False --
 ## 本章小结
 
 `nanoGPT` 的价值在于完整但不庞大。本书会用它作为主线，把 GPT 的模型结构、数据处理、训练循环、采样和性能优化连起来。读者应该带着“代码如何工作”的问题阅读，而不是只记概念。
-

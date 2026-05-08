@@ -4,7 +4,7 @@
 
 本章把 `README.md` 中的命令扩展成完整训练指南。读完后，读者应该知道如何选择训练路径、如何调整小模型参数、如何判断训练是否正常，以及从零训练和微调有什么本质区别。
 
-对应源码位置：`train.py`、`config/train_shakespeare_char.py`、`config/finetune_shakespeare.py`、`config/train_gpt2.py`。
+对应源码位置：`code/nanogpt/train.py`、`code/nanogpt/config/train_shakespeare_char.py`、`code/nanogpt/config/finetune_shakespeare.py`、`code/nanogpt/config/train_gpt2.py`。
 
 ## 7.1 三种训练任务
 
@@ -23,6 +23,7 @@ nanoGPT 常见任务可以分成三类：
 准备数据：
 
 ```sh
+cd code/nanogpt
 python data/shakespeare_char/prepare.py
 ```
 
@@ -187,4 +188,3 @@ val loss 上升：
 ## 本章小结
 
 训练 nanoGPT 的关键不是记住某条命令，而是理解命令背后的资源约束和实验目标。小实验用于学习链路，微调用于迁移能力，大规模预训练用于复现模型能力。三者的参数选择逻辑不同。
-

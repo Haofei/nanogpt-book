@@ -22,16 +22,22 @@
 
 每章都遵循相同结构：本章目标、源码位置、核心概念、代码导读、实验建议、常见问题和小结。
 
+本书中的源码都位于仓库的 `code/nanogpt/` 目录。除非章节另有说明，所有训练和采样命令都默认先进入源码目录：
+
+```sh
+cd code/nanogpt
+```
+
 ## 项目源码地图
 
 | 文件或目录 | 本书章节 | 作用 |
 | --- | --- | --- |
-| `model.py` | 第 4 章 | GPT 模型、Attention、MLP、Block、参数初始化、生成 |
-| `train.py` | 第 5 章 | 配置、数据读取、训练循环、评估、checkpoint、DDP |
-| `sample.py` | 第 8 章 | 加载模型、编码 prompt、自回归生成 |
-| `data/*/prepare.py` | 第 6 章 | 数据下载、tokenization、二进制训练文件 |
-| `config/*.py` | 第 7 章 | 不同训练/微调/评估配置 |
-| `bench.py` | 第 9 章 | 简化性能测试入口 |
+| `code/nanogpt/model.py` | 第 4 章 | GPT 模型、Attention、MLP、Block、参数初始化、生成 |
+| `code/nanogpt/train.py` | 第 5 章 | 配置、数据读取、训练循环、评估、checkpoint、DDP |
+| `code/nanogpt/sample.py` | 第 8 章 | 加载模型、编码 prompt、自回归生成 |
+| `code/nanogpt/data/*/prepare.py` | 第 6 章 | 数据下载、tokenization、二进制训练文件 |
+| `code/nanogpt/config/*.py` | 第 7 章 | 不同训练/微调/评估配置 |
+| `code/nanogpt/bench.py` | 第 9 章 | 简化性能测试入口 |
 
 ## 目录
 

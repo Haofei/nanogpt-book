@@ -4,7 +4,7 @@
 
 本章解释 `sample.py` 如何加载模型并生成文本。读者应该能理解 prompt 如何编码、logits 如何变成概率、temperature 和 top-k 如何影响输出，以及为什么生成过程必须一个 token 一个 token 地进行。
 
-对应源码位置：`sample.py`、`model.py` 的 `GPT.generate`。
+对应源码位置：`code/nanogpt/sample.py`、`code/nanogpt/model.py` 的 `GPT.generate`。
 
 ## 8.1 训练和生成的差异
 
@@ -206,4 +206,3 @@ python sample.py --out_dir=out-shakespeare-char --device=cpu --start="KING:" --t
 ## 本章小结
 
 文本生成的本质是反复执行 next-token prediction。`sample.py` 负责加载模型和编码 prompt，`generate` 负责循环采样。temperature 和 top-k 是最基础也最重要的生成控制参数。
-

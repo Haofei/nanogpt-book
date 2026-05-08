@@ -4,7 +4,7 @@
 
 本章解释 nanoGPT 中主要性能设计。读者应该能理解训练速度和显存受哪些因素影响，以及 `torch.compile`、混合精度、Flash Attention、梯度累积和 DDP 各自解决什么问题。
 
-对应源码位置：`train.py`、`model.py`、`bench.py`。
+对应源码位置：`code/nanogpt/train.py`、`code/nanogpt/model.py`、`code/nanogpt/bench.py`。
 
 ## 9.1 性能不是单一指标
 
@@ -181,4 +181,3 @@ best val loss：
 ## 本章小结
 
 nanoGPT 的性能设计并不复杂，但覆盖了现代训练的关键主题：混合精度、编译、高效 attention、梯度累积和分布式同步。理解这些机制后，读者才能根据自己的硬件条件合理缩放模型。
-

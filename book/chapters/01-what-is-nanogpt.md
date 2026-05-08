@@ -31,29 +31,29 @@
 主要文件：
 
 ```text
-model.py
-train.py
-sample.py
-configurator.py
-bench.py
-config/
-data/
-assets/
+code/nanogpt/model.py
+code/nanogpt/train.py
+code/nanogpt/sample.py
+code/nanogpt/configurator.py
+code/nanogpt/bench.py
+code/nanogpt/config/
+code/nanogpt/data/
+code/nanogpt/assets/
 ```
 
-`model.py` 定义 GPT。里面有 LayerNorm、CausalSelfAttention、MLP、Block、GPTConfig 和 GPT。
+`code/nanogpt/model.py` 定义 GPT。里面有 LayerNorm、CausalSelfAttention、MLP、Block、GPTConfig 和 GPT。
 
-`train.py` 是训练入口。它负责读取配置、构造 batch、初始化模型、运行训练循环、评估 loss 和保存 checkpoint。
+`code/nanogpt/train.py` 是训练入口。它负责读取配置、构造 batch、初始化模型、运行训练循环、评估 loss 和保存 checkpoint。
 
-`sample.py` 是生成入口。它负责加载模型、编码 prompt、调用 `generate` 并解码输出。
+`code/nanogpt/sample.py` 是生成入口。它负责加载模型、编码 prompt、调用 `generate` 并解码输出。
 
 `configurator.py` 负责让配置文件和命令行参数覆盖默认变量。
 
 `bench.py` 用来做性能基准，减少训练脚本中评估和 checkpoint 的干扰。
 
-`config/` 保存不同任务的配置，例如训练 Shakespeare、微调 Shakespeare、评估 GPT-2。
+`code/nanogpt/config/` 保存不同任务的配置，例如训练 Shakespeare、微调 Shakespeare、评估 GPT-2。
 
-`data/` 保存数据准备脚本。
+`code/nanogpt/data/` 保存数据准备脚本。
 
 ## 1.3 训练链路
 
@@ -132,13 +132,13 @@ sample.py -> encode -> generate -> decode
 
 不要一开始就从 `train.py` 第 1 行读到最后。更好的顺序是：
 
-1. `README.md` 的 quick start。
-2. `config/train_shakespeare_char.py`。
-3. `data/shakespeare_char/prepare.py`。
-4. `model.py` 的 `GPT.forward`。
-5. `train.py` 的 `get_batch`。
-6. `train.py` 的训练循环。
-7. `sample.py` 和 `GPT.generate`。
+1. 根目录 `README.md` 和 `book/README.md`。
+2. `code/nanogpt/config/train_shakespeare_char.py`。
+3. `code/nanogpt/data/shakespeare_char/prepare.py`。
+4. `code/nanogpt/model.py` 的 `GPT.forward`。
+5. `code/nanogpt/train.py` 的 `get_batch`。
+6. `code/nanogpt/train.py` 的训练循环。
+7. `code/nanogpt/sample.py` 和 `GPT.generate`。
 
 这个顺序符合数据实际流动。
 
@@ -157,4 +157,3 @@ nanoGPT 的代码少，所以每个设计都暴露在读者面前。读者能直
 ## 本章小结
 
 nanoGPT 是一个小型 GPT 训练系统。它的核心价值是让读者在一个仓库中看到数据、模型、训练、生成四条链路如何闭合。下一章会补齐阅读模型源码前必须知道的 Transformer 基础。
-

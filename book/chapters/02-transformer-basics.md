@@ -4,7 +4,7 @@
 
 本章补齐阅读 `model.py` 前必须掌握的 Transformer 概念。读者不需要先完整推导论文，但需要理解 token embedding、position embedding、self-attention、causal mask、LayerNorm、残差连接和 MLP。
 
-对应源码位置：`model.py`。
+对应源码位置：`code/nanogpt/model.py`。
 
 ## 2.1 语言模型在做什么
 
@@ -261,4 +261,3 @@ logits: B x T x vocab_size
 ## 本章小结
 
 Transformer 的核心不是神秘公式，而是一组可追踪的张量变换。token embedding 把 id 变成向量，position embedding 加入顺序信息，causal self-attention 读取历史上下文，MLP 增强每个位置的表达，残差和 LayerNorm 保持训练稳定。
-

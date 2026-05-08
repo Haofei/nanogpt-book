@@ -4,7 +4,7 @@
 
 本章从整体上理解 GPT 架构，为下一章精读 `model.py` 做准备。读者应该能画出 nanoGPT 的模型结构，并说明训练时每个位置如何预测下一个 token。
 
-对应源码位置：`model.py` 的 `GPT` 类。
+对应源码位置：`code/nanogpt/model.py` 的 `GPT` 类。
 
 ## 3.1 GPT 是 Decoder-only Transformer
 
@@ -188,4 +188,3 @@ vocab_size：词表大小
 ## 本章小结
 
 GPT 是一个自回归 decoder-only Transformer。它把 token id 转成向量，经过多层 causal Transformer Block，再投影到词表空间。训练时并行预测每个位置的下一个 token，生成时循环预测最后一个位置的下一个 token。
-

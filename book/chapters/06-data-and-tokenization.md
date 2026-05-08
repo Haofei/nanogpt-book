@@ -9,7 +9,7 @@
 - 为什么训练时使用 `np.memmap`。
 - 如何为自己的文本数据创建新数据目录。
 
-对应源码位置：`data/shakespeare_char/prepare.py`、`data/shakespeare/prepare.py`、`data/openwebtext/prepare.py`、`train.py` 的 `get_batch`。
+对应源码位置：`code/nanogpt/data/shakespeare_char/prepare.py`、`code/nanogpt/data/shakespeare/prepare.py`、`code/nanogpt/data/openwebtext/prepare.py`、`code/nanogpt/train.py` 的 `get_batch`。
 
 ## 6.1 为什么不能直接训练字符串
 
@@ -215,4 +215,3 @@ dataset = 'my_dataset'
 ## 本章小结
 
 数据准备不是训练前的杂活，而是语言模型系统的一部分。tokenizer 决定了模型预测的基本单位，二进制文件决定了训练读取方式，`meta.pkl` 决定了训练和采样是否能使用同一套编码规则。
-
